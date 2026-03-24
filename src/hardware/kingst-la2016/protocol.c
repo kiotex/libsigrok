@@ -1571,10 +1571,8 @@ static void LIBUSB_CALL receive_transfer(struct libusb_transfer *transfer)
 	 */
 	if (devc->continuous)
 		stream_data(sdi, transfer->buffer, transfer->actual_length);
-		sr_info("KIOTEX PATCH ACTIVE: receive_transfer continuous path");
 	else
 		send_chunk(sdi, transfer->buffer, transfer->actual_length);
-		sr_info("KIOTEX PATCH ACTIVE: receive_transfer chunk path");
 
 	/*
 	 * Re-submit completed transfers (regardless of timeout or
