@@ -822,13 +822,10 @@ static int set_sample_config(const struct sr_dev_inst *sdi)
 		sr_dbg("Streaming: channel count %zu, product %" PRIu64 ".",
 			devc->stream.enabled_count, stream_bandwidth);
 		stream_bandwidth /= 1000 * 1000;
+		devc->stream.flush_period_ms = LA2016_STREAM_PUSH_IVAL;
 		if (stream_bandwidth >= LA2016_STREAM_MBPS_MAX) {
 			sr_warn("High USB stream bandwidth: %" PRIu64 "Mbps.",
 				stream_bandwidth);
-		}
-		if (stream_bandwidth < LA2016_STREAM_PUSH_THR) {
-			sr_dbg("Streaming: low Mbps, suggest periodic flush.");
-			devc->stream.flush_period_ms = LA2016_STREAM_PUSH_IVAL;
 		}
 	}
 
@@ -1257,11 +1254,16 @@ static int la2016_stop_acquisition(const struct sr_dev_inst *sdi)
 
 SR_PRIV int la2016_abort_acquisition(const struct sr_dev_inst *sdi)
 {
+	struct dev_context *devc;
 	int ret;
 
 	ret = la2016_stop_acquisition(sdi);
 	if (ret != SR_OK)
 		return ret;
+
+	devc = sdi->priv;
+	if (devc && devc->feed_queue)
+		(void)feed_queue_logic_flush(devc->feed_queue);
 
 	(void)la2016_usbxfer_cancel_all(sdi);
 
