@@ -262,10 +262,15 @@ static GSource *usb_source_new(struct sr_session *session,
 	const struct libusb_pollfd **upollfds, **upfd;
 
 	upollfds = libusb_get_pollfds(usb_ctx);
+
+/* There are no filehandles in Windows */	
+#if !defined(__MINGW32__) 
 	if (!upollfds) {
 		sr_err("Failed to get libusb file descriptors.");
 		return NULL;
 	}
+#endif
+
 	source = g_source_new(&usb_source_funcs, sizeof(struct usb_source));
 	usource = (struct usb_source *)source;
 
@@ -282,6 +287,9 @@ static GSource *usb_source_new(struct sr_session *session,
 	usource->usb_ctx = usb_ctx;
 	usource->pollfds = g_ptr_array_new_full(8, &usb_source_free_pollfd);
 
+	
+/* There are no filehandles in Windows */	
+#if !defined(__MINGW32__) 
 	for (upfd = upollfds; *upfd != NULL; upfd++)
 		usb_pollfd_added((*upfd)->fd, (*upfd)->events, usource);
 
@@ -293,6 +301,8 @@ static GSource *usb_source_new(struct sr_session *session,
 	libusb_set_pollfd_notifiers(usb_ctx,
 		&usb_pollfd_added, &usb_pollfd_removed, usource);
 
+#endif
+	
 	return source;
 }
 
