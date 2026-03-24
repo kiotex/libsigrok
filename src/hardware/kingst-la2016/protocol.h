@@ -184,4 +184,15 @@ SR_PRIV int la2016_abort_acquisition(const struct sr_dev_inst *sdi);
 SR_PRIV int la2016_receive_data(int fd, int revents, void *cb_data);
 SR_PRIV void la2016_release_resources(const struct sr_dev_inst *sdi);
 
+struct stream_state_t {
+	size_t enabled_count;
+	uint32_t enabled_mask;
+	uint32_t channel_masks[32];
+	size_t channel_index;
+	uint32_t sample_data[32];
+	uint64_t flush_period_ms;
+	uint64_t last_flushed;
+	uint64_t flush_count;
+} stream;
+
 #endif

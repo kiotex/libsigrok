@@ -1571,8 +1571,10 @@ static void LIBUSB_CALL receive_transfer(struct libusb_transfer *transfer)
 	 */
 	if (devc->continuous)
 		stream_data(sdi, transfer->buffer, transfer->actual_length);
+		sr_info("KIOTEX PATCH ACTIVE: receive_transfer continuous path");
 	else
 		send_chunk(sdi, transfer->buffer, transfer->actual_length);
+		sr_info("KIOTEX PATCH ACTIVE: receive_transfer chunk path");
 
 	/*
 	 * Re-submit completed transfers (regardless of timeout or
@@ -1679,10 +1681,13 @@ SR_PRIV int la2016_receive_data(int fd, int revents, void *cb_data)
 		elapsed = now - devc->stream.last_flushed;
 		elapsed /= 1000;
 		if (elapsed >= devc->stream.flush_period_ms) {
-			sr_dbg("Stream mode, flushing.");
+			devc->stream.flush_count++;
+			sr_info("KIOTEX PATCH ACTIVE: periodic flush executed (#%" PRIu64 ")",
+				devc->stream.flush_count);
 			feed_queue_logic_flush(devc->feed_queue);
 			devc->stream.last_flushed = now;
 		}
+
 	}
 
 	/* Postprocess completion of sample data download. */
