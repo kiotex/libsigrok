@@ -1468,14 +1468,13 @@ static void stream_data(struct sr_dev_inst *sdi,
 	size_t bit_count;
 	const uint8_t *rp;
 	uint32_t sample_value;
-	uint8_t sample_buff[sizeof(sample_value)];
+	uint8_t sample_buff[16 * sizeof(sample_value)];
+	uint8_t *wrptr;
 	size_t bit_idx;
 	uint32_t ch_mask;
 
 	devc = sdi->priv;
 	stream = &devc->stream;
-	sr_info("KIOTEX STREAM: entered, data_length=%zu total_samples=%" PRIu64,
-		data_length, devc->total_samples);
 
 	/* Ignore incoming USB data after complete sample data download. */
 	if (devc->download_finished)
@@ -1509,15 +1508,20 @@ static void stream_data(struct sr_dev_inst *sdi,
 		stream->channel_index++;
 		if (stream->channel_index != stream->enabled_count)
 			continue;
+		wrptr = sample_buff;
 		for (bit_idx = 0; bit_idx < bit_count; bit_idx++) {
 			sample_value = stream->sample_data[bit_idx];
-			write_u32le(sample_buff, sample_value);
-			feed_queue_logic_submit_one(devc->feed_queue,
-				sample_buff, 1);
+			if (devc->model->channel_count == 32)
+				write_u32le_inc(&wrptr, sample_value);
+			else
+				write_u16le_inc(&wrptr, sample_value);
 		}
+		feed_queue_logic_submit_many(devc->feed_queue,
+			sample_buff, bit_count);
 		sr_sw_limits_update_samples_read(&devc->sw_limits, bit_count);
 		devc->total_samples += bit_count;
-		memset(stream->sample_data, 0, sizeof(stream->sample_data));
+		memset(stream->sample_data, 0,
+			bit_count * sizeof(stream->sample_data[0]));
 		stream->channel_index = 0;
 	}
 
@@ -1558,9 +1562,6 @@ static void LIBUSB_CALL receive_transfer(struct libusb_transfer *transfer)
 	device_gone = transfer->status == LIBUSB_TRANSFER_NO_DEVICE;
 	sr_dbg("receive_transfer(): status %s received %d bytes.",
 		libusb_error_name(transfer->status), transfer->actual_length);
-	sr_info("KIOTEX RX: continuous=%d status=%d actual_length=%d download_finished=%d",
-		devc->continuous, transfer->status, transfer->actual_length,
-		devc->download_finished);
 	if (device_gone) {
 		sr_warn("Lost communication to USB device.");
 		devc->download_finished = TRUE;
@@ -1576,10 +1577,8 @@ static void LIBUSB_CALL receive_transfer(struct libusb_transfer *transfer)
 	 */
 	if (devc->continuous) {
 		stream_data(sdi, transfer->buffer, transfer->actual_length);
-		sr_info("KIOTEX PATCH ACTIVE: receive_transfer continuous path");
 	} else {
 		send_chunk(sdi, transfer->buffer, transfer->actual_length);
-		sr_info("KIOTEX PATCH ACTIVE: receive_transfer chunk path");
 	}
 
 	/*
@@ -1686,12 +1685,8 @@ SR_PRIV int la2016_receive_data(int fd, int revents, void *cb_data)
 			devc->stream.last_flushed = now;
 		elapsed = now - devc->stream.last_flushed;
 		elapsed /= 1000;
-		sr_info("KIOTEX FLUSH CHECK: flush_period_ms=%" PRIu64 " total_samples=%" PRIu64 " download_finished=%d",
-			devc->stream.flush_period_ms, devc->total_samples,
-			devc->download_finished);
 		if (elapsed >= devc->stream.flush_period_ms) {
 			devc->stream.flush_count++;
-			sr_info("KIOTEX FLUSH EXEC: flushing feed queue now");
 			feed_queue_logic_flush(devc->feed_queue);
 			devc->stream.last_flushed = now;
 		}
