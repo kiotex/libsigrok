@@ -823,6 +823,11 @@ static int set_sample_config(const struct sr_dev_inst *sdi)
 			devc->stream.enabled_count, stream_bandwidth);
 		stream_bandwidth /= 1000 * 1000;
 		devc->stream.flush_period_ms = LA2016_STREAM_PUSH_IVAL;
+		if (stream_bandwidth >= LA2016_STREAM_PUSH_THR) {
+			devc->stream.flush_period_ms /= 10;
+			if (!devc->stream.flush_period_ms)
+				devc->stream.flush_period_ms = 1;
+		}
 		if (stream_bandwidth >= LA2016_STREAM_MBPS_MAX) {
 			sr_warn("High USB stream bandwidth: %" PRIu64 "Mbps.",
 				stream_bandwidth);

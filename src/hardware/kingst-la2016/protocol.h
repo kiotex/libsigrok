@@ -95,6 +95,14 @@
 #define LA2016_STREAM_PUSH_IVAL	250	/* In units of ms. */
 
 /*
+ * Streaming uses synchronous session callbacks for output processing.
+ * Keep the queued sample count smaller than the generic capture path
+ * to shorten individual flushes and leave more time to recycle USB
+ * transfers under sustained high-bandwidth operation.
+ */
+#define LA2016_STREAM_CONVBUFFER_SIZE	(512 * 1024)
+
+/*
  * Whether to de-initialize the device hardware in the driver's close
  * callback. It is desirable to e.g. configure PWM channels and leave
  * the generator running after the application shuts down. Users can
