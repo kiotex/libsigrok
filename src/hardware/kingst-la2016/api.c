@@ -1041,7 +1041,7 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 	struct drv_context *drvc;
 	struct sr_context *ctx;
 	struct dev_context *devc;
-	size_t unitsize, xfersize, repsize, seqsize, queue_size;
+	size_t unitsize, xfersize, repsize, seqsize;
 	double voltage;
 	int ret;
 
@@ -1069,11 +1069,8 @@ static int dev_acquisition_start(const struct sr_dev_inst *sdi)
 		} else {
 			return SR_ERR_ARG;
 		}
-		queue_size = LA2016_CONVBUFFER_SIZE;
-		if (devc->continuous)
-			queue_size = LA2016_STREAM_CONVBUFFER_SIZE;
 		devc->feed_queue = feed_queue_logic_alloc(sdi,
-			queue_size, unitsize);
+			LA2016_CONVBUFFER_SIZE, unitsize);
 		if (!devc->feed_queue) {
 			sr_err("Cannot allocate buffer for session feed.");
 			return SR_ERR_MALLOC;

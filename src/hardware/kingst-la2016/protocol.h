@@ -47,6 +47,12 @@
 #define LA2016_EP6_PKTSZ	512 /* Max packet size of USB endpoint 6. */
 #define LA2016_USB_BUFSZ	(512 * 1024) /* 512KiB buffer. */
 #define LA2016_USB_XFER_COUNT	8 /* Size of USB bulk transfers pool. */
+/*
+ * Continuous streaming with binary output can block in synchronous
+ * session callbacks long enough to starve USB resubmission. Keep a
+ * deeper pool of in-flight transfers to increase buffering headroom.
+ */
+#define LA2016_STREAM_XFER_COUNT	32
 
 /* USB communication timeout during regular operation. */
 #define DEFAULT_TIMEOUT_MS	200
@@ -93,14 +99,6 @@
 #define LA2016_STREAM_MBPS_MAX	200	/* In units of Mbps. */
 #define LA2016_STREAM_PUSH_THR	16	/* In units of Mbps. */
 #define LA2016_STREAM_PUSH_IVAL	250	/* In units of ms. */
-
-/*
- * Streaming uses synchronous session callbacks for output processing.
- * Keep the queued sample count smaller than the generic capture path
- * to shorten individual flushes and leave more time to recycle USB
- * transfers under sustained high-bandwidth operation.
- */
-#define LA2016_STREAM_CONVBUFFER_SIZE	(512 * 1024)
 
 /*
  * Whether to de-initialize the device hardware in the driver's close
