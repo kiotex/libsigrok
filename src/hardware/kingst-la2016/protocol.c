@@ -1474,6 +1474,8 @@ static void stream_data(struct sr_dev_inst *sdi,
 
 	devc = sdi->priv;
 	stream = &devc->stream;
+	sr_info("KIOTEX STREAM: entered, data_length=%zu total_samples=%" PRIu64,
+		data_length, devc->total_samples);
 
 	/* Ignore incoming USB data after complete sample data download. */
 	if (devc->download_finished)
@@ -1556,6 +1558,9 @@ static void LIBUSB_CALL receive_transfer(struct libusb_transfer *transfer)
 	device_gone = transfer->status == LIBUSB_TRANSFER_NO_DEVICE;
 	sr_dbg("receive_transfer(): status %s received %d bytes.",
 		libusb_error_name(transfer->status), transfer->actual_length);
+	sr_info("KIOTEX RX: continuous=%d status=%d actual_length=%d download_finished=%d",
+		devc->continuous, transfer->status, transfer->actual_length,
+		devc->download_finished);
 	if (device_gone) {
 		sr_warn("Lost communication to USB device.");
 		devc->download_finished = TRUE;
@@ -1681,10 +1686,12 @@ SR_PRIV int la2016_receive_data(int fd, int revents, void *cb_data)
 			devc->stream.last_flushed = now;
 		elapsed = now - devc->stream.last_flushed;
 		elapsed /= 1000;
+		sr_info("KIOTEX FLUSH CHECK: flush_period_ms=%" PRIu64 " total_samples=%" PRIu64 " download_finished=%d",
+			devc->stream.flush_period_ms, devc->total_samples,
+			devc->download_finished);
 		if (elapsed >= devc->stream.flush_period_ms) {
 			devc->stream.flush_count++;
-			sr_info("KIOTEX PATCH ACTIVE: periodic flush executed (#%" PRIu64 ")",
-				devc->stream.flush_count);
+			sr_info("KIOTEX FLUSH EXEC: flushing feed queue now");
 			feed_queue_logic_flush(devc->feed_queue);
 			devc->stream.last_flushed = now;
 		}
